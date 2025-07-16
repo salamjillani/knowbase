@@ -59,6 +59,15 @@ export const SearchInformation = () => {
     }
   };
 
+    const renderResultField = (result, fieldNames) => {
+    for (const field of fieldNames) {
+      if (result[field]) {
+        return result[field];
+      }
+    }
+    return 'N/A';
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b shadow-sm">
@@ -199,61 +208,44 @@ export const SearchInformation = () => {
           </div>
         </div>
 
-        {searchResults.length > 0 && (
-          <div className="mb-12">
-            <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">
-              {t("searchResults")} ({searchResults.length} {t("found")})
-            </h3>
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {searchResults.map((result) => (
-                <Card key={result._id} className="border border-gray-300 hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-semibold text-gray-800 text-sm sm:text-base">
-                        {result.name || result.username || result.email}
-                      </h4>
-                      <Badge variant="outline" className="border-blue-200 text-blue-500 text-xs">
-                        {result.source}
-                      </Badge>
-                    </div>
-                    <div className="text-xs sm:text-sm text-gray-600 space-y-1">
-                      {result.email && (
-                        <div className="flex items-center">
-                          <Mail className="h-3 w-3 mr-1" />
-                          Email: {result.email}
-                        </div>
-                      )}
-                      {result.phone && (
-                        <div className="flex items-center">
-                          <Phone className="h-3 w-3 mr-1" />
-                          Phone: {result.phone}
-                        </div>
-                      )}
-                      {result.address && (
-                        <div className="flex items-center">
-                          <MapPin className="h-3 w-3 mr-1" />
-                          Address: {result.address}
-                        </div>
-                      )}
-                      {result.property && (
-                        <div className="flex items-center">
-                          <Building className="h-3 w-3 mr-1" />
-                          Property: {result.property}
-                        </div>
-                      )}
-                      {result.socialMedia && (
-                        <div className="flex items-center">
-                          <MessageCircle className="h-3 w-3 mr-1" />
-                          Social: {result.socialMedia}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+          {searchResults.length > 0 && (
+      <div className="mb-12">
+        <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">
+          {t("searchResults")} ({searchResults.length} {t("found")})
+        </h3>
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {searchResults.map((result) => (
+            <Card key={result._id} className="border border-gray-300 hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h4 className="font-semibold text-gray-800 text-sm sm:text-base">
+                    {renderResultField(result, ['姓名', '联系人', '企业名称', '产品名称'])}
+                  </h4>
+                  <Badge variant="outline" className="border-blue-200 text-blue-500 text-xs">
+                    {result.source}
+                  </Badge>
+                </div>
+                <div className="text-xs sm:text-sm text-gray-600 space-y-1">
+                  <div className="flex items-center">
+                    <Mail className="h-3 w-3 mr-1" />
+                    邮箱: {renderResultField(result, ['邮箱', 'email'])}
+                  </div>
+                  <div className="flex items-center">
+                    <Phone className="h-3 w-3 mr-1" />
+                    手机: {renderResultField(result, ['手机', '手机号', '联系方式', '电话'])}
+                  </div>
+                  <div className="flex items-center">
+                    <MapPin className="h-3 w-3 mr-1" />
+                    地址: {renderResultField(result, ['地址', '企业地址', '收货地址'])}
+                  </div>
+                  {/* Add more fields as needed */}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )}
 
         {showBulletinBoard && <BulletinBoard />}
         {showAdCarousel && <AdCarousel />}

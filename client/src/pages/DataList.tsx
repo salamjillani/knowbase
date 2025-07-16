@@ -48,6 +48,8 @@ interface BaseSearchResult {
   id: number;
   name: string;
   type: string;
+  source?: string;
+  _id?: string;
 }
 
 interface PersonalInfoResult extends BaseSearchResult {
@@ -78,6 +80,18 @@ type SearchResult =
   | CommunicationResult
   | PropertyResult;
 
+interface Service {
+  icon: any;
+  nameKey: string;
+  descKey: string;
+  price: number;
+}
+
+interface ServiceCategory {
+  title: string;
+  services: Service[];
+}
+
 export const DataList = () => {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
@@ -90,108 +104,7 @@ export const DataList = () => {
   const [currentView, setCurrentView] = useState<"dashboard" | "faq">("dashboard");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [activeCategory, setActiveCategory] = useState("all");
-
-  // Mock search data for different categories
-  const mockSearchData = {
-    personal: [
-      {
-        id: 1,
-        name: "John Smith",
-        email: "john.smith@email.com",
-        phone: "+1234567890",
-        location: "New York, USA",
-        type: "Personal Info",
-      },
-      {
-        id: 2,
-        name: "Sarah Johnson",
-        email: "sarah.j@company.com",
-        phone: "+1987654321",
-        location: "California, USA",
-        type: "Personal Info",
-      },
-    ] as PersonalInfoResult[],
-    location: [
-      {
-        id: 3,
-        name: "Michael Brown",
-        address: "123 Main St, Chicago, IL",
-        coordinates: "41.8781, -87.6298",
-        type: "Location Data",
-      },
-      {
-        id: 4,
-        name: "Lisa Davis",
-        address: "456 Oak Ave, Boston, MA",
-        coordinates: "42.3601, -71.0589",
-        type: "Location Data",
-      },
-    ] as LocationResult[],
-    communication: [
-      {
-        id: 5,
-        name: "David Wilson",
-        email: "david.w@tech.com",
-        phone: "+1555123456",
-        socialMedia: "@davidw_tech",
-        type: "Communication",
-      },
-      {
-        id: 6,
-        name: "Emma Taylor",
-        email: "emma.taylor@design.com",
-        phone: "+1555987654",
-        socialMedia: "@emmadesigns",
-        type: "Communication",
-      },
-    ] as CommunicationResult[],
-    property: [
-      {
-        id: 7,
-        name: "Robert Lee",
-        property: "789 Pine St, Seattle, WA",
-        value: "$450,000",
-        type: "Property Info",
-      },
-      {
-        id: 8,
-        name: "Jennifer White",
-        property: "321 Elm Dr, Portland, OR",
-        value: "$380,000",
-        type: "Property Info",
-      },
-    ] as PropertyResult[],
-  };
-
-  const handleSearch = () => {
-    if (!searchQuery.trim()) return;
-
-    let results: SearchResult[] = [];
-
-    if (activeCategory === "all") {
-      results = Object.values(mockSearchData)
-        .flat()
-        .filter(
-          (item) =>
-            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            ("email" in item &&
-              item.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-            ("phone" in item && item.phone.includes(searchQuery))
-        );
-    } else {
-      const categoryData =
-        mockSearchData[activeCategory as keyof typeof mockSearchData] || [];
-      results = categoryData.filter(
-        (item) =>
-          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          ("email" in item &&
-            item.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-          ("phone" in item && item.phone.includes(searchQuery))
-      );
-    }
-
-    setSearchResults(results);
-  };
+  const [isSearching, setIsSearching] = useState(false);
 
   const categoryNavigation = [
     { id: "all", label: t("all") },
@@ -202,289 +115,75 @@ export const DataList = () => {
     { id: "communication", label: t("communicationRelated") },
   ];
 
-  const serviceCategories = [
-    {
-      id: "location",
-      title: t("realTimeLocation"),
-      services: [
-        {
-          nameKey: "phoneOwner",
-          descKey: "phoneOwnerDesc",
-          price: 15,
-          icon: Phone,
-        },
-        {
-          nameKey: "checkPersonalMobile",
-          descKey: "checkPersonalMobileDesc",
-          price: 25,
-          icon: Smartphone,
-        },
-        {
-          nameKey: "realTimeLocationAuth",
-          descKey: "realTimeLocationAuthDesc",
-          price: 50,
-          icon: MapPin,
-        },
-        {
-          nameKey: "expressDelivery",
-          descKey: "expressDeliveryDesc",
-          price: 18,
-          icon: Car,
-        },
-        {
-          nameKey: "flightSearch",
-          descKey: "flightSearchDesc",
-          price: 30,
-          icon: Globe,
-        },
-        {
-          nameKey: "vehicleTrajectory",
-          descKey: "vehicleTrajectoryDesc",
-          price: 40,
-          icon: Car,
-        },
-        {
-          nameKey: "flightTrainTravel",
-          descKey: "flightTrainTravelDesc",
-          price: 35,
-          icon: Globe,
-        },
-        {
-          nameKey: "personalPolicy",
-          descKey: "personalPolicyDesc",
-          price: 22,
-          icon: FileText,
-        },
-        {
-          nameKey: "comprehensiveQuery",
-          descKey: "comprehensiveQueryDesc",
-          price: 65,
-          icon: Database,
-        },
-      ],
-    },
-    {
-      id: "identity",
-      title: t("personalInfo"),
-      services: [
-        {
-          nameKey: "householdRegistration",
-          descKey: "householdRegistrationDesc",
-          price: 30,
-          icon: User,
-        },
-        {
-          nameKey: "fullHouseholdRegistration",
-          descKey: "fullHouseholdRegistrationDesc",
-          price: 45,
-          icon: Users,
-        },
-        {
-          nameKey: "marriageRecord",
-          descKey: "marriageRecordDesc",
-          price: 25,
-          icon: User,
-        },
-        {
-          nameKey: "companyShareholder",
-          descKey: "companyShareholderDesc",
-          price: 40,
-          icon: Building,
-        },
-        {
-          nameKey: "educationInfo",
-          descKey: "educationInfoDesc",
-          price: 35,
-          icon: FileText,
-        },
-        {
-          nameKey: "backgroundQuery",
-          descKey: "backgroundQueryDesc",
-          price: 55,
-          icon: Shield,
-        },
-        {
-          nameKey: "workUnit",
-          descKey: "workUnitDesc",
-          price: 30,
-          icon: Building,
-        },
-        {
-          nameKey: "addressQuery",
-          descKey: "addressQueryDesc",
-          price: 20,
-          icon: MapPin,
-        },
-        {
-          nameKey: "passportEnquiry",
-          descKey: "passportEnquiryDesc",
-          price: 35,
-          icon: Globe,
-        },
-      ],
-    },
-    {
-      id: "property",
-      title: t("assetsProperty"),
-      services: [
-        {
-          nameKey: "allProperties",
-          descKey: "allPropertiesDesc",
-          price: 50,
-          icon: Home,
-        },
-        {
-          nameKey: "vehicleInfo",
-          descKey: "vehicleInfoDesc",
-          price: 35,
-          icon: Car,
-        },
-        {
-          nameKey: "vehicleFileQuery",
-          descKey: "vehicleFileQueryDesc",
-          price: 30,
-          icon: Car,
-        },
-        {
-          nameKey: "bankCheck",
-          descKey: "bankCheckDesc",
-          price: 45,
-          icon: CreditCard,
-        },
-        {
-          nameKey: "bankTransaction",
-          descKey: "bankTransactionDesc",
-          price: 55,
-          icon: Banknote,
-        },
-        {
-          nameKey: "alipayAccount",
-          descKey: "alipayAccountDesc",
-          price: 40,
-          icon: Smartphone,
-        },
-        {
-          nameKey: "transactionCheck",
-          descKey: "transactionCheckDesc",
-          price: 60,
-          icon: Banknote,
-        },
-        {
-          nameKey: "loanInfo",
-          descKey: "loanInfoDesc",
-          price: 35,
-          icon: CreditCard,
-        },
-        {
-          nameKey: "allPersonalProperty",
-          descKey: "allPersonalPropertyDesc",
-          price: 75,
-          icon: Database,
-        },
-      ],
-    },
-    {
-      id: "communication",
-      title: t("communicationSocial"),
-      services: [
-        {
-          nameKey: "criminalSearch",
-          descKey: "criminalSearchDesc",
-          price: 40,
-          icon: Shield,
-        },
-        {
-          nameKey: "wechatContent",
-          descKey: "wechatContentDesc",
-          price: 30,
-          icon: MessageCircle,
-        },
-        {
-          nameKey: "freezingReason",
-          descKey: "freezingReasonDesc",
-          price: 25,
-          icon: Lock,
-        },
-        {
-          nameKey: "wechatCancellation",
-          descKey: "wechatCancellationDesc",
-          price: 20,
-          icon: MessageCircle,
-        },
-        {
-          nameKey: "alipayMobile",
-          descKey: "alipayMobileDesc",
-          price: 18,
-          icon: Phone,
-        },
-        {
-          nameKey: "realNameInfo",
-          descKey: "realNameInfoDesc",
-          price: 35,
-          icon: User,
-        },
-        {
-          nameKey: "threeNetworkMobile",
-          descKey: "threeNetworkMobileDesc",
-          price: 45,
-          icon: Smartphone,
-        },
-        {
-          nameKey: "wechatRecovery",
-          descKey: "wechatRecoveryDesc",
-          price: 50,
-          icon: MessageCircle,
-        },
-        {
-          nameKey: "qqFriendCollection",
-          descKey: "qqFriendCollectionDesc",
-          price: 30,
-          icon: Users,
-        },
-      ],
-    },
-    {
-      id: "other",
-      title: t("otherEnquiries"),
-      services: [
-        {
-          nameKey: "generalInfo",
-          descKey: "generalInfoDesc",
-          price: 20,
-          icon: Search,
-        },
-        {
-          nameKey: "documentVerification",
-          descKey: "documentVerificationDesc",
-          price: 25,
-          icon: FileText,
-        },
-        {
-          nameKey: "identityConfirmation",
-          descKey: "identityConfirmationDesc",
-          price: 30,
-          icon: User,
-        },
-        {
-          nameKey: "backgroundScreening",
-          descKey: "backgroundScreeningDesc",
-          price: 35,
-          icon: Shield,
-        },
-        {
-          nameKey: "contactVerification",
-          descKey: "contactVerificationDesc",
-          price: 15,
-          icon: Phone,
-        },
-      ],
-    },
-  ];
+  // Define services structure (you can populate this with your actual services)
+  const services: ServiceCategory[] = [];
 
-  const filteredServices =
-    activeCategory === "all"
-      ? serviceCategories
-      : serviceCategories.filter((cat) => cat.id === activeCategory);
+  // Filter services based on active category
+  const filteredServices = services.filter((category) => {
+    if (activeCategory === "all") return true;
+    // Add your filtering logic here
+    return true;
+  });
+
+  // Add the same renderResultField function like search information
+  const renderResultField = (result: any, fieldNames: string[]) => {
+    for (const field of fieldNames) {
+      if (result[field]) {
+        return result[field];
+      }
+    }
+    return 'N/A';
+  };
+
+const handleSearch = async () => {
+  if (!searchQuery.trim()) {
+    alert('Please enter a search query');
+    return;
+  }
+  
+  setIsSearching(true);
+  setSearchResults([]); // Clear previous results
+  
+  try {
+    console.log('Searching for:', searchQuery, 'Type:', searchType);
+    
+    const response = await fetch('http://localhost:5000/api/search', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ 
+        query: searchQuery.trim(), 
+        type: searchType 
+      })
+    });
+    
+    const data = await response.json();
+    
+    console.log('Response status:', response.status);
+    console.log('Response data:', data);
+    
+    if (!response.ok) {
+      throw new Error(data.message || 'Search failed');
+    }
+    
+    if (Array.isArray(data)) {
+      setSearchResults(data);
+      console.log('Search results set:', data.length, 'items');
+    } else {
+      console.error('Unexpected response format:', data);
+      setSearchResults([]);
+    }
+    
+  } catch (error) {
+    console.error('Search error:', error);
+    alert(`Search failed: ${error.message}`);
+    setSearchResults([]);
+  } finally {
+    setIsSearching(false);
+  }
+};
 
   if (currentView === "faq") {
     return <FAQ />;
@@ -685,18 +384,19 @@ export const DataList = () => {
                 onKeyPress={(e) => e.key === "Enter" && handleSearch()}
               />
               <Button
-                onClick={handleSearch}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 sm:px-6 text-sm sm:text-base"
+                onClick={handleSearch}
+                disabled={isSearching}
               >
                 <Search className="h-4 w-4 mr-2" />
-                {t("search")}
+                {isSearching ? "Searching..." : t("search")}
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Search Results */}
+      {/* Search Results - Updated similarly to SearchInformation */}
       {searchResults.length > 0 && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">
@@ -705,44 +405,39 @@ export const DataList = () => {
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {searchResults.map((result) => (
               <Card
-                key={result.id}
-                className="border border-gray-200 hover:shadow-md transition-shadow"
+                key={result._id || result.id}
+                className="border border-gray-300 hover:shadow-md transition-shadow"
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-2">
                     <h4 className="font-semibold text-gray-800 text-sm sm:text-base">
-                      {result.name}
+                      {renderResultField(result, ['姓名', '联系人', '企业名称', '产品名称', 'name'])}
                     </h4>
                     <Badge
                       variant="outline"
                       className="border-blue-200 text-blue-500 text-xs"
                     >
-                      {result.type}
+                      {result.source || result.type}
                     </Badge>
                   </div>
                   <div className="text-xs sm:text-sm text-gray-600 space-y-1">
-                    {"email" in result && (
+                    <div className="flex items-center">
+                      <Mail className="h-3 w-3 mr-1" />
+                      邮箱: {renderResultField(result, ['邮箱', 'email'])}
+                    </div>
+                    <div className="flex items-center">
+                      <Phone className="h-3 w-3 mr-1" />
+                      手机: {renderResultField(result, ['手机', '手机号', '联系方式', '电话', 'phone'])}
+                    </div>
+                    <div className="flex items-center">
+                      <MapPin className="h-3 w-3 mr-1" />
+                      地址: {renderResultField(result, ['地址', '企业地址', '收货地址', 'address', 'location'])}
+                    </div>
+                    {/* Additional fields for other result types */}
+                    {"socialMedia" in result && (
                       <div className="flex items-center">
-                        <Mail className="h-3 w-3 mr-1" />
-                        {t("email")}: {result.email}
-                      </div>
-                    )}
-                    {"phone" in result && (
-                      <div className="flex items-center">
-                        <Phone className="h-3 w-3 mr-1" />
-                        {t("phone")}: {result.phone}
-                      </div>
-                    )}
-                    {"location" in result && (
-                      <div className="flex items-center">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        {t("location")}: {result.location}
-                      </div>
-                    )}
-                    {"address" in result && (
-                      <div className="flex items-center">
-                        <Home className="h-3 w-3 mr-1" />
-                        {t("address")}: {result.address}
+                        <MessageCircle className="h-3 w-3 mr-1" />
+                        {t("social")}: {result.socialMedia}
                       </div>
                     )}
                     {"property" in result && (
@@ -751,10 +446,10 @@ export const DataList = () => {
                         {t("property")}: {result.property}
                       </div>
                     )}
-                    {"socialMedia" in result && (
+                    {"coordinates" in result && (
                       <div className="flex items-center">
-                        <MessageCircle className="h-3 w-3 mr-1" />
-                        {t("social")}: {result.socialMedia}
+                        <MapPin className="h-3 w-3 mr-1" />
+                        坐标: {result.coordinates}
                       </div>
                     )}
                   </div>
