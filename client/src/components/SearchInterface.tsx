@@ -17,7 +17,9 @@ import {
   Phone,
   MapPin,
   Calendar,
-  Loader2
+  Loader2,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -25,24 +27,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-interface SearchResult {
-  id: string;
-  email?: string;
-  phone?: string;
-  name?: string;
-  address?: string;
-  lastSeen?: string;
-  source: string;
-  confidence: number;
-}
+import { PaymentModal } from "@/components/PaymentModal";
 
 export const SearchInterface = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState<'email' | 'phone' | 'name' | 'mixed'>('email');
   const [isSearching, setIsSearching] = useState(false);
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [results, setResults] = useState([]);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [unlockingId, setUnlockingId] = useState(null);
   const { user, updatePoints } = useAuth();
   const { t } = useLanguage();
   const { showQueryPricing } = useConfig();
@@ -58,43 +52,26 @@ export const SearchInterface = () => {
     }
 
     if (user && user.points < 1) {
-      toast({
-        title: 'Insufficient Points',
-        description: 'You need at least 1 point to perform a search.',
-        variant: 'destructive',
-      });
+      setShowPaymentModal(true);
       return;
     }
 
     setIsSearching(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      const mockResults: SearchResult[] = [
-        {
-          id: '1',
-          email: searchType === 'email' ? searchQuery : 'john.doe@example.com',
-          phone: '+1234567890',
-          name: 'John Doe',
-          address: '123 Main St, City, State',
-          lastSeen: '2024-01-15',
-          source: 'Database Alpha',
-          confidence: 85
+      const response = await fetch('http://localhost:5000/api/search', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        {
-          id: '2',
-          email: 'jane.smith@example.com',
-          phone: '+1987654321',
-          name: 'Jane Smith',
-          address: '456 Oak Ave, Town, State',
-          lastSeen: '2024-01-10',
-          source: 'Database Beta',
-          confidence: 92
-        }
-      ];
-
-      setResults(mockResults);
+        body: JSON.stringify({ query: searchQuery, type: searchType })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+      
+      setResults(data.map(result => ({ ...result, unlocked: false })));
       setSearchHistory(prev => [searchQuery, ...prev.slice(0, 4)]);
       
       if (user) {
@@ -103,17 +80,48 @@ export const SearchInterface = () => {
 
       toast({
         title: 'Search Complete',
-        description: `Found ${mockResults.length} results. 1 point deducted.`,
+        description: `Found ${data.length} results. 1 point deducted.`,
       });
 
     } catch (error) {
       toast({
         title: 'Search Failed',
-        description: 'Unable to complete search. Please try again.',
+        description: error.message || 'Unable to complete search. Please try again.',
         variant: 'destructive',
       });
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const unlockResult = async (resultId) => {
+    if (!user || user.points < 1) {
+      setShowPaymentModal(true);
+      return;
+    }
+
+    try {
+      setUnlockingId(resultId);
+      updatePoints(user.points - 1);
+      
+      setResults(prev => 
+        prev.map(result => 
+          result._id === resultId ? { ...result, unlocked: true } : result
+        )
+      );
+      
+      toast({
+        title: 'Details Unlocked',
+        description: '1 point deducted for full details.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Unlock Failed',
+        description: 'Failed to unlock details. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setUnlockingId(null);
     }
   };
 
@@ -131,9 +139,17 @@ export const SearchInterface = () => {
     window.URL.revokeObjectURL(url);
   };
 
+  const renderResultField = (result, fieldNames) => {
+    for (const field of fieldNames) {
+      if (result[field]) {
+        return result.unlocked ? result[field] : '*****';
+      }
+    }
+    return 'N/A';
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8">
-      {/* Search Header */}
       <div className="flex flex-col sm:flex-row items-center justify-between">
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 sm:mb-0">Database Search</h2>
         {showQueryPricing && (
@@ -143,7 +159,6 @@ export const SearchInterface = () => {
         )}
       </div>
 
-      {/* Search Form */}
       <Card className="bg-white border-gray-200">
         <CardHeader>
           <CardTitle className="text-gray-800 flex items-center text-lg sm:text-xl">
@@ -152,7 +167,6 @@ export const SearchInterface = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 sm:space-y-4">
-          {/* Search Type Selection */}
           <div className="flex flex-wrap gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -169,7 +183,6 @@ export const SearchInterface = () => {
             </DropdownMenu>
           </div>
 
-          {/* Search Input */}
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
             <Textarea
               placeholder="Enter search query (email, phone, name, or multiple criteria)"
@@ -180,7 +193,6 @@ export const SearchInterface = () => {
             />
           </div>
 
-          {/* Search Button */}
           <Button
             onClick={handleSearch}
             disabled={isSearching || !user || user.points < 1}
@@ -192,7 +204,6 @@ export const SearchInterface = () => {
         </CardContent>
       </Card>
 
-      {/* Search History */}
       {searchHistory.length > 0 && (
         <Card className="bg-white border-gray-200">
           <CardHeader>
@@ -215,7 +226,6 @@ export const SearchInterface = () => {
         </Card>
       )}
 
-      {/* Search Results */}
       {results.length > 0 && (
         <Card className="bg-white border-gray-200">
           <CardHeader>
@@ -238,10 +248,15 @@ export const SearchInterface = () => {
           <CardContent>
             <div className="space-y-4">
               {results.map((result) => (
-                <Card key={result.id} className="bg-white border-gray-200">
+                <Card key={result._id} className="bg-white border-gray-200">
                   <CardContent className="p-3 sm:p-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 sm:mb-3">
-                      <h3 className="text-gray-800 font-semibold text-sm sm:text-base">{result.name}</h3>
+                      <h3 className="text-gray-800 font-semibold text-sm sm:text-base">
+                        {result.unlocked ? 
+                          renderResultField(result, ['姓名', '联系人', '企业名称', '产品名称', 'name']) : 
+                          '*****'
+                        }
+                      </h3>
                       <div className="flex items-center space-x-2 mt-2 sm:mt-0">
                         <Badge 
                           variant="secondary" 
@@ -264,13 +279,13 @@ export const SearchInterface = () => {
                         {result.email && (
                           <div className="flex items-center space-x-2 text-gray-600 text-xs sm:text-sm">
                             <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
-                            <span>{result.email}</span>
+                            <span>Email: {renderResultField(result, ['邮箱', 'email'])}</span>
                           </div>
                         )}
                         {result.phone && (
                           <div className="flex items-center space-x-2 text-gray-600 text-xs sm:text-sm">
                             <Phone className="h-3 w-3 sm:h-4 sm:w-4" />
-                            <span>{result.phone}</span>
+                            <span>Phone: {renderResultField(result, ['手机', '手机号', '联系方式', '电话', 'phone'])}</span>
                           </div>
                         )}
                       </div>
@@ -278,7 +293,7 @@ export const SearchInterface = () => {
                         {result.address && (
                           <div className="flex items-center space-x-2 text-gray-600 text-xs sm:text-sm">
                             <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
-                            <span>{result.address}</span>
+                            <span>Address: {renderResultField(result, ['地址', '企业地址', '收货地址', 'address', 'location'])}</span>
                           </div>
                         )}
                         {result.lastSeen && (
@@ -289,6 +304,24 @@ export const SearchInterface = () => {
                         )}
                       </div>
                     </div>
+                    
+                    {!result.unlocked && (
+                      <div className="mt-4">
+                        <Button 
+                          size="sm" 
+                          className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                          onClick={() => unlockResult(result._id)}
+                          disabled={unlockingId === result._id}
+                        >
+                          {unlockingId === result._id ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Unlock className="h-4 w-4 mr-2" />
+                          )}
+                          Unlock Full Details (1 point)
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -297,7 +330,6 @@ export const SearchInterface = () => {
         </Card>
       )}
 
-      {/* No Results Message */}
       {!isSearching && results.length === 0 && searchQuery && (
         <Card className="bg-white border-gray-200">
           <CardContent className="text-center py-6 sm:py-8">
@@ -305,6 +337,11 @@ export const SearchInterface = () => {
           </CardContent>
         </Card>
       )}
+
+      <PaymentModal 
+        isOpen={showPaymentModal} 
+        onClose={() => setShowPaymentModal(false)} 
+      />
     </div>
   );
 };

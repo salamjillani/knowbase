@@ -10,6 +10,7 @@ import { LanguageProvider } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
 import { FAQ } from "@/components/FAQ";
 import Index from "./pages/Index";
+import { CommissionWithdrawal } from "@/components/CommissionWithdrawal";
 
 const ProtectedRoute = ({ children }) => {
   const  isAuthenticated  = useAuth();
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/search-information" element={<ProtectedRoute><SearchInformation /></ProtectedRoute>} />
             <Route path="/data-list" element={<ProtectedRoute><DataList /></ProtectedRoute>} />
             <Route path="/hot-topics" element={<ProtectedRoute><HotTopics /></ProtectedRoute>} />
+            <Route path="/commission" element={<ProtectedRoute><CommissionWithdrawal /></ProtectedRoute>} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

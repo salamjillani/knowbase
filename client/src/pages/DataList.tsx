@@ -43,66 +43,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Define proper types for search results
-interface BaseSearchResult {
-  id: number;
-  name: string;
-  type: string;
-  source?: string;
-  _id?: string;
-}
-
-interface PersonalInfoResult extends BaseSearchResult {
-  email: string;
-  phone: string;
-  location: string;
-}
-
-interface LocationResult extends BaseSearchResult {
-  address: string;
-  coordinates: string;
-}
-
-interface CommunicationResult extends BaseSearchResult {
-  email: string;
-  phone: string;
-  socialMedia: string;
-}
-
-interface PropertyResult extends BaseSearchResult {
-  property: string;
-  value: string;
-}
-
-type SearchResult =
-  | PersonalInfoResult
-  | LocationResult
-  | CommunicationResult
-  | PropertyResult;
-
-interface Service {
-  icon: any;
-  nameKey: string;
-  descKey: string;
-  price: number;
-}
-
-interface ServiceCategory {
-  title: string;
-  services: Service[];
-}
-
 export const DataList = () => {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
   const { showBulletinBoard, showAdCarousel, showQueryPricing } = useConfig();
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchType, setSearchType] = useState<
-    "phoneNumber" | "qqNumber" | "idNumber" | "weChatID" | "weiboID" | "email"
-  >("email");
+  const [searchType, setSearchType] = useState("email");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [currentView, setCurrentView] = useState<"dashboard" | "faq">("dashboard");
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [currentView, setCurrentView] = useState("dashboard");
+  const [searchResults, setSearchResults] = useState([]);
   const [activeCategory, setActiveCategory] = useState("all");
   const [isSearching, setIsSearching] = useState(false);
 
@@ -115,18 +64,7 @@ export const DataList = () => {
     { id: "communication", label: t("communicationRelated") },
   ];
 
-  // Define services structure (you can populate this with your actual services)
-  const services: ServiceCategory[] = [];
-
-  // Filter services based on active category
-  const filteredServices = services.filter((category) => {
-    if (activeCategory === "all") return true;
-    // Add your filtering logic here
-    return true;
-  });
-
-  // Add the same renderResultField function like search information
-  const renderResultField = (result: any, fieldNames: string[]) => {
+  const renderResultField = (result, fieldNames) => {
     for (const field of fieldNames) {
       if (result[field]) {
         return result[field];
@@ -135,55 +73,45 @@ export const DataList = () => {
     return 'N/A';
   };
 
-const handleSearch = async () => {
-  if (!searchQuery.trim()) {
-    alert('Please enter a search query');
-    return;
-  }
-  
-  setIsSearching(true);
-  setSearchResults([]); // Clear previous results
-  
-  try {
-    console.log('Searching for:', searchQuery, 'Type:', searchType);
-    
-    const response = await fetch('http://localhost:5000/api/search', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({ 
-        query: searchQuery.trim(), 
-        type: searchType 
-      })
-    });
-    
-    const data = await response.json();
-    
-    console.log('Response status:', response.status);
-    console.log('Response data:', data);
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'Search failed');
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      alert('Please enter a search query');
+      return;
     }
     
-    if (Array.isArray(data)) {
-      setSearchResults(data);
-      console.log('Search results set:', data.length, 'items');
-    } else {
-      console.error('Unexpected response format:', data);
-      setSearchResults([]);
+    if (user && user.points < 1) {
+      setShowPaymentModal(true);
+      return;
     }
     
-  } catch (error) {
-    console.error('Search error:', error);
-    alert(`Search failed: ${error.message}`);
+    setIsSearching(true);
     setSearchResults([]);
-  } finally {
-    setIsSearching(false);
-  }
-};
+    
+    try {
+      const response = await fetch('http://localhost:5000/api/search', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ 
+          query: searchQuery.trim(), 
+          type: searchType 
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) throw new Error(data.message || 'Search failed');
+      
+      setSearchResults(data);
+    } catch (error) {
+      alert(`Search failed: ${error.message}`);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   if (currentView === "faq") {
     return <FAQ />;
@@ -191,54 +119,38 @@ const handleSearch = async () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
-                <span className="text-lg sm:text-xl font-bold text-gray-800">KnowBase</span>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
+              <span className="text-lg sm:text-xl font-bold text-gray-800">KnowBase</span>
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <Link to="/search-information">
-                <Button
-                  variant="ghost"
-                  className="text-gray-600 hover:text-blue-500 text-sm sm:text-base"
-                >
+                <Button variant="ghost" className="text-gray-600 hover:text-blue-500 text-sm sm:text-base">
                   {t("searchInformation") || "Search Information"}
                 </Button>
               </Link>
               <Link to="/data-list">
-                <Button
-                  variant="ghost"
-                  className="text-gray-600 hover:text-blue-500 text-sm sm:text-base"
-                >
+                <Button variant="ghost" className="text-gray-600 hover:text-blue-500 text-sm sm:text-base">
                   {t("dataList") || "Data List"}
                 </Button>
               </Link>
               <Link to="/hot-topics">
-                <Button
-                  variant="ghost"
-                  className="text-gray-600 hover:text-blue-500 text-sm sm:text-base"
-                >
+                <Button variant="ghost" className="text-gray-600 hover:text-blue-500 text-sm sm:text-base">
                   {t("hotTopics") || "Hot Topics"}
+                </Button>
+              </Link>
+              <Link to="/commission">
+                <Button variant="ghost" className="text-gray-600 hover:text-blue-500 text-sm sm:text-base">
+                  {t("commission") || "Commission"}
                 </Button>
               </Link>
               <LanguageSelector variant="blue" />
               <Badge className="bg-red-500 text-white px-2 py-1 sm:px-3 sm:py-1 text-xs sm:text-sm">
                 {t("professionalService")}
               </Badge>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-blue-500 hover:text-blue-600 text-sm sm:text-base"
-                onClick={() => setCurrentView("faq")}
-              >
-                <HelpCircle className="h-4 w-4 mr-1" />
-                {t("faq")}
-              </Button>
               <Card className="bg-blue-50 border-blue-200 px-3 py-1 sm:px-4 sm:py-2">
                 <div className="flex items-center space-x-2">
                   <Coins className="h-4 w-4 text-blue-500" />
@@ -247,6 +159,16 @@ const handleSearch = async () => {
                   </span>
                 </div>
               </Card>
+              {user?.commission > 0 && (
+                <Card className="bg-green-50 border-green-200 px-3 py-1 sm:px-4 sm:py-2">
+                  <div className="flex items-center space-x-2">
+                    <Banknote className="h-4 w-4 text-green-500" />
+                    <span className="text-green-800 font-medium text-sm sm:text-base">
+                      ¥{user.commission.toFixed(2)}
+                    </span>
+                  </div>
+                </Card>
+              )}
               {user?.isVip && (
                 <Badge className="bg-yellow-500 text-white text-xs sm:text-sm">
                   <Crown className="h-3 w-3 mr-1" />
@@ -266,7 +188,6 @@ const handleSearch = async () => {
         </div>
       </header>
 
-      {/* Navigation */}
       <nav className="bg-blue-500 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap space-x-4 sm:space-x-8 py-3">
@@ -287,13 +208,9 @@ const handleSearch = async () => {
         </div>
       </nav>
 
-      {/* Bulletin Board (Optional) */}
       {showBulletinBoard && <BulletinBoard />}
-
-      {/* Ad Carousel (Optional) */}
       {showAdCarousel && <AdCarousel />}
 
-      {/* Search Bar */}
       <div className="bg-gray-100 py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="space-y-4">
@@ -384,19 +301,22 @@ const handleSearch = async () => {
                 onKeyPress={(e) => e.key === "Enter" && handleSearch()}
               />
               <Button
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 sm:px-6 text-sm sm:text-base"
                 onClick={handleSearch}
                 disabled={isSearching}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 sm:px-6 text-sm sm:text-base"
               >
-                <Search className="h-4 w-4 mr-2" />
-                {isSearching ? "Searching..." : t("search")}
+                {isSearching ? "Searching..." : (
+                  <>
+                    <Search className="h-4 w-4 mr-2" />
+                    {t("search")}
+                  </>
+                )}
               </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Search Results - Updated similarly to SearchInformation */}
       {searchResults.length > 0 && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">
@@ -433,25 +353,6 @@ const handleSearch = async () => {
                       <MapPin className="h-3 w-3 mr-1" />
                       地址: {renderResultField(result, ['地址', '企业地址', '收货地址', 'address', 'location'])}
                     </div>
-                    {/* Additional fields for other result types */}
-                    {"socialMedia" in result && (
-                      <div className="flex items-center">
-                        <MessageCircle className="h-3 w-3 mr-1" />
-                        {t("social")}: {result.socialMedia}
-                      </div>
-                    )}
-                    {"property" in result && (
-                      <div className="flex items-center">
-                        <Building className="h-3 w-3 mr-1" />
-                        {t("property")}: {result.property}
-                      </div>
-                    )}
-                    {"coordinates" in result && (
-                      <div className="flex items-center">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        坐标: {result.coordinates}
-                      </div>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -460,58 +361,16 @@ const handleSearch = async () => {
         </div>
       )}
 
-      {/* Services Grid */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-        {filteredServices.map((category, categoryIndex) => (
-          <div key={categoryIndex} className="mb-12">
-            <div className="text-center mb-6">
-              <h2 className="text-xl sm:text-2xl font-bold text-red-500 mb-2">
-                {category.title}
-              </h2>
-              <div className="w-16 sm:w-24 h-1 bg-red-500 mx-auto"></div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {category.services.map((service, index) => (
-                <Card
-                  key={index}
-                  className="hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-blue-300"
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="p-2 rounded-full bg-blue-50">
-                        <service.icon className="h-5 w-5 text-blue-500" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-800 mb-1 text-sm sm:text-base leading-tight">
-                          {t(service.nameKey)}
-                        </h3>
-                        <p className="text-xs sm:text-sm text-gray-500 mb-3">
-                          {t(service.descKey)}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          {showQueryPricing && (
-                            <span className="text-red-500 font-bold text-base sm:text-lg">
-                              ${service.price}
-                            </span>
-                          )}
-                          <Button
-                            size="sm"
-                            className="bg-blue-500 hover:bg-blue-600 text-white text-xs sm:text-sm px-3 py-1"
-                            onClick={() => setShowPaymentModal(true)}
-                          >
-                            {t("query")}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        ))}
+        <div className="text-center mb-12">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+            Professional Database Query System
+          </h1>
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 mb-8">
+            Comprehensive data queries for security professionals
+          </p>
+        </div>
 
-        {/* Special Call-to-Action Section */}
         <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-lg p-6 sm:p-8 text-center mb-8">
           <h2 className="text-xl sm:text-2xl font-bold mb-4">
             {t("investigateMistress")}
@@ -525,7 +384,6 @@ const handleSearch = async () => {
           </Button>
         </div>
 
-        {/* Find Someone Section */}
         <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg p-6 sm:p-8 text-center">
           <h2 className="text-xl sm:text-2xl font-bold mb-4">{t("findDebtCollector")}</h2>
           <p className="text-base sm:text-lg mb-6">{t("findDebtCollectorDesc")}</p>
@@ -538,10 +396,9 @@ const handleSearch = async () => {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="bg-gray-800 text-white py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-400 text-sm sm:text-base">{t("footerText")}</p>
+          <p className="text-gray-400 text-sm sm:text-base">© 2025 KnowBase. All rights reserved.</p>
         </div>
       </footer>
 

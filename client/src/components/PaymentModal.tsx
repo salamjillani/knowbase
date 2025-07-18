@@ -23,15 +23,10 @@ interface PaymentModalProps {
 
 export const PaymentModal = ({ isOpen, onClose }: PaymentModalProps) => {
   const [paymentStep, setPaymentStep] = useState<'select' | 'payment' | 'confirm'>('select');
-  const [selectedPackage, setSelectedPackage] = useState<{
-    points: number;
-    price: number;
-    name: string;
-  } | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'processing' | 'completed' | 'failed'>('pending');
   const [transactionId, setTransactionId] = useState('');
-  
-  const { user, updatePoints } = useAuth();
+  const { user, updatePoints, updateCommission } = useAuth();
 
   const packages = [
     { points: 100, price: 10, name: 'Basic Pack' },
@@ -41,7 +36,7 @@ export const PaymentModal = ({ isOpen, onClose }: PaymentModalProps) => {
 
   const walletAddress = 'TRX9a5u8SVs7Jn4t2Qx7k3L8mN9pQ1rS2tU3v4W5x6Y7z8A9b';
 
-  const handlePackageSelect = (pkg: typeof packages[0]) => {
+  const handlePackageSelect = (pkg) => {
     setSelectedPackage(pkg);
     setPaymentStep('payment');
   };
@@ -66,22 +61,43 @@ export const PaymentModal = ({ isOpen, onClose }: PaymentModalProps) => {
 
     setPaymentStatus('processing');
     
-    setTimeout(() => {
-      if (selectedPackage && user) {
-        updatePoints(user.points + selectedPackage.points);
-        setPaymentStatus('completed');
-        
-        toast({
-          title: 'Payment Successful!',
-          description: `${selectedPackage.points} points added to your account`,
-        });
-        
-        setTimeout(() => {
-          onClose();
-          resetModal();
-        }, 2000);
-      }
-    }, 3000);
+    try {
+      const response = await fetch('http://localhost:5000/api/payment/add-points', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ 
+          userId: user.id, 
+          package: selectedPackage 
+        })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+      
+      updatePoints(data.points);
+      if (data.commission) updateCommission(data.commission);
+      
+      setPaymentStatus('completed');
+      toast({
+        title: 'Payment Successful!',
+        description: `${selectedPackage.points} points added to your account`,
+      });
+      
+      setTimeout(() => {
+        onClose();
+        resetModal();
+      }, 2000);
+    } catch (error) {
+      setPaymentStatus('failed');
+      toast({
+        title: 'Payment Failed',
+        description: error.message || 'Something went wrong. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const resetModal = () => {

@@ -74,8 +74,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateCommission = (commission) => {
+    if (user) {
+      const updatedUser = { ...user, commission };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, register, logout, updatePoints, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isAuthenticated, 
+      login, 
+      register, 
+      logout, 
+      updatePoints,
+      updateCommission,
+      loading 
+    }}>
       {children}
     </AuthContext.Provider>
   );
