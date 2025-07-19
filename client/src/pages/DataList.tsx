@@ -11,6 +11,7 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import { BulletinBoard } from "@/components/BulletinBoard";
 import { AdCarousel } from "@/components/AdCarousel";
 import { useConfig } from "@/hooks/useConfig";
+import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import {
   LogOut,
@@ -75,11 +76,12 @@ export const DataList = () => {
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-      alert('Please enter a search query');
+      toast.error("Please enter a search query");
       return;
     }
     
     if (user && user.points < 1) {
+      toast.error("You need at least 1 point to perform a search.");
       setShowPaymentModal(true);
       return;
     }
@@ -102,11 +104,17 @@ export const DataList = () => {
       
       const data = await response.json();
       
-      if (!response.ok) throw new Error(data.message || 'Search failed');
+      if (!response.ok) {
+        throw new Error(data.message || 'Search failed');
+      }
       
       setSearchResults(data);
+      
+      // Show success toast
+      toast.success(`Search completed! Found ${data.length} results.`);
+      
     } catch (error) {
-      alert(`Search failed: ${error.message}`);
+      toast.error(`Search failed: ${error.message}`);
       setSearchResults([]);
     } finally {
       setIsSearching(false);
